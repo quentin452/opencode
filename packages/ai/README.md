@@ -1036,7 +1036,7 @@ The hosted result is represented as a provider-executed tool call and a tool res
 Video generation is a job: `start` submits it and returns at once, and the caller decides when to read its `status`,
 fetch its `result`, or `cancel` it. Nothing polls for you. Every call after `start` takes the model and the job's
 `token`, plain JSON you can store and read back from another process, so recovering after a restart is the same call
-as a normal status read. Models come from `.video(...)` selectors on the `XAI` facade.
+as a normal status read. Models come from `.video(...)` selectors on the `XAI`, `Volcengine` and `BytePlus` facades.
 
 ```ts
 import { Effect } from "effect"
@@ -1086,6 +1086,16 @@ Provider notes:
   `reference_audios`, and `sound` to `generate_audio`, and leaves `aspect: "auto"` out when a start frame sets the
   shape. It has no reference video input. `providerOptions.mode: "edit" | "extend"` sends a native `video: { url }`
   source to `/videos/edits` or `/videos/extensions`.
+- **Seedance** (`Volcengine.configure(...).video(...)` with `ARK_API_KEY`, `BytePlus.configure(...).video(...)` with
+  `BYTEPLUS_API_KEY`) builds Ark's `content[]`: the prompt as a `text` item, `start` and `end` as `image_url` items
+  with roles `first_frame` and `last_frame`, and references as `reference_image`, `reference_video` or
+  `reference_audio` by kind. Your own `Media.ref(...)` assets go as `asset://<id>`. `duration` goes to `duration`,
+  `aspect` to `ratio` (`auto` becomes `adaptive`), `resolution` to `resolution` and `sound` to `generate_audio`. Ark
+  doesn't allow frames and references in one task; that combination is sent and the provider's error comes back.
+  `providerOptions.draft_task: { id }` adds a `draft_task` item; `frames`, `seed`, `watermark`, `output_format`,
+  `omni_reference_task_type`, `return_last_frame` and the rest go into the body as-is. `cancel` sends `DELETE`, which
+  only cancels a queued task: Ark refuses it for a running one and deletes the record of a finished one. Video URLs
+  expire 24 hours after the task finished.
 
 The promise client has the same calls, each accepting `{ signal }`:
 
