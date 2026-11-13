@@ -1036,7 +1036,7 @@ The hosted result is represented as a provider-executed tool call and a tool res
 Video generation is a job: `start` submits it and returns at once, and the caller decides when to read its `status`,
 fetch its `result`, or `cancel` it. Nothing polls for you. Every call after `start` takes the model and the job's
 `token`, plain JSON you can store and read back from another process, so recovering after a restart is the same call
-as a normal status read. Models come from `.video(...)` selectors on the `XAI` facade.
+as a normal status read. Models come from `.video(...)` selectors on the `XAI` and `Google` facades.
 
 ```ts
 import { Effect } from "effect"
@@ -1086,6 +1086,15 @@ Provider notes:
   `reference_audios`, and `sound` to `generate_audio`, and leaves `aspect: "auto"` out when a start frame sets the
   shape. It has no reference video input. `providerOptions.mode: "edit" | "extend"` sends a native `video: { url }`
   source to `/videos/edits` or `/videos/extensions`.
+- **Google** (`Google.video("gemini-omni-1.2-flash")`) starts a background Gemini Omni interaction. Omni has no
+  role field for media, so `start`, `end` and `references` go into `input` in that order (images, plus video
+  references), and `generation_config.video_config.task` is set to `image_to_video` for frames only or
+  `reference_to_video` for references only; with both, the prompt decides. `duration` becomes
+  `response_format.duration` (`"3s"`), and `aspect` and `resolution` go to `response_format` as is (resolution
+  lowercased); `aspect: "auto"` leaves the ratio out. It rejects `end` without `start` (a lone image reads as the
+  first frame) and `sound: false` (Omni always generates audio). Videos come back as inline bytes. `cancel` posts to
+  `/interactions/{id}/cancel`. `providerOptions` takes native Interactions fields, such as `previous_interaction_id`
+  to edit or extend a generated video, `generation_config.video_config.task`, `service_tier` and `webhook_config`.
 
 The promise client has the same calls, each accepting `{ signal }`:
 
