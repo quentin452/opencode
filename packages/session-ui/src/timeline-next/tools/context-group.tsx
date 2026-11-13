@@ -63,10 +63,12 @@ export function ContextGroup(props: {
   const reasoning = createMemo(() => props.parts.flatMap((part) => (part.type === "reasoning" ? [part] : [])))
   const thoughtsOnly = createMemo(() => reasoning().length > 0 && reasoning().length === props.parts.length)
   const partEvents = createMemo(() => workEvents(props.parts))
+
   // A group of only subagents and work reporting back reads as the events row it is, not a group around one.
   const workOnly = createMemo(() =>
     props.parts.every((part) => part.type === "event" || (part.type === "tool" && toolRule(part).name === "subagent")),
   )
+
   const events = createMemo(() => [...partEvents().values()])
   const activity = createMemo(() => activityLabel(tools(), events(), i18n))
 
