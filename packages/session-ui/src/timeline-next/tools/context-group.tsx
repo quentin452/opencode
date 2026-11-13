@@ -63,13 +63,16 @@ export function ContextGroup(props: {
   const reasoning = createMemo(() => props.parts.flatMap((part) => (part.type === "reasoning" ? [part] : [])))
   const thoughtsOnly = createMemo(() => reasoning().length > 0 && reasoning().length === props.parts.length)
   const partEvents = createMemo(() => workEvents(props.parts))
+  const events = createMemo(() => [...partEvents().values()])
 
-  // A group of only subagents and work reporting back reads as the events row it is, not a group around one.
-  const workOnly = createMemo(() =>
-    props.parts.every((part) => part.type === "event" || (part.type === "tool" && toolRule(part).name === "subagent")),
+  // A group of only subagents and work reporting back reads as the events row it is, not a group around one. Until a
+  // call has anything to count, it stays a group, so the row never renders empty.
+  const workOnly = createMemo(
+    () =>
+      events().length > 0 &&
+      props.parts.every((part) => part.type === "event" || (part.type === "tool" && toolRule(part).name === "subagent")),
   )
 
-  const events = createMemo(() => [...partEvents().values()])
   const activity = createMemo(() => activityLabel(tools(), events(), i18n))
 
   const label = createMemo(() => {
@@ -179,12 +182,14 @@ export function ContextGroup(props: {
       <Show
         when={!workOnly()}
         fallback={
-          <TimelineEventRow
-            events={events()}
-            open={props.open}
-            onOpenChange={change}
-            onRevealShell={props.onRevealShell}
-          />
+          <div data-timeline-part-ids={props.parts.map((part) => part.id).join(",")}>
+            <TimelineEventRow
+              events={events()}
+              open={props.open}
+              onOpenChange={change}
+              onRevealShell={props.onRevealShell}
+            />
+          </div>
         }
       >
         <div
