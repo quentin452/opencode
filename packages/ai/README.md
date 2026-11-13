@@ -1036,7 +1036,7 @@ The hosted result is represented as a provider-executed tool call and a tool res
 Video generation is a job: `start` submits it and returns at once, and the caller decides when to read its `status`,
 fetch its `result`, or `cancel` it. Nothing polls for you. Every call after `start` takes the model and the job's
 `token`, plain JSON you can store and read back from another process, so recovering after a restart is the same call
-as a normal status read. Models come from `.video(...)` selectors on the `XAI` facade.
+as a normal status read. Models come from `.video(...)` selectors on the `XAI` and `MiniMax` facades.
 
 ```ts
 import { Effect } from "effect"
@@ -1086,6 +1086,18 @@ Provider notes:
   `reference_audios`, and `sound` to `generate_audio`, and leaves `aspect: "auto"` out when a start frame sets the
   shape. It has no reference video input. `providerOptions.mode: "edit" | "extend"` sends a native `video: { url }`
   source to `/videos/edits` or `/videos/extensions`.
+- **MiniMax** (`MiniMax.configure(...).video(id)`, or `@opencode/ai/providers/minimax/videos`) serves two APIs and picks
+  one by model family: Hailuo and `*-01` models use v1, everything else (H3) uses v2. Video takes the API host without
+  a version as `baseURL` (`https://api.minimax.io`, or `https://api.minimax.cn` for minimax-cn). On H3, `start`,
+  `end` and `references` become `content[]` items with `first_frame`, `last_frame` and `reference_image` /
+  `reference_video` / `reference_audio` roles, MiniMax file refs become `mm_file://` URLs, `aspect: "auto"` becomes
+  `ratio: "adaptive"`, and `resolution` is uppercased (`480P`, `2K`). H3 requires `resolution` and `duration`, plus a
+  `ratio` for text-only prompts; nothing is filled in, so MiniMax rejects a request without them. H3 always has sound,
+  so `sound: false` fails before sending. On Hailuo, `start` and `end` map to `first_frame_image` and
+  `last_frame_image`, image references to `subject_reference`, and the result looks up the file's download URL, which
+  expires after one hour. Hailuo is silent and has no aspect field, so `sound: true`, an explicit `aspect`, and video
+  or audio references fail before sending. Cancel works on H3 (only while queued); Hailuo has no cancel. Native fields
+  such as `extra.prompt_expansion_mode` (H3), `prompt_optimizer` (Hailuo) and `callback_url` go under `providerOptions`.
 
 The promise client has the same calls, each accepting `{ signal }`:
 

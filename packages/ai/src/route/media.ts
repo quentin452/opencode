@@ -191,17 +191,18 @@ export const queued = <Request extends MediaRequest, Response, Token>(
   const generationRoute = (token: Token, exchange: Exchange, execute: Execute) => {
     // Only the GET exchange retries: a decoded terminal failure (`output.ended`) can be a `ProviderInternal` too, and
     // re-reading it would spin until the caller's deadline.
+    const get = (path: string) =>
+      transport.call("GET", path, exchange, execute).pipe(
+        Effect.retry({ schedule: READ_RETRY, while: isRetryable }),
+        Effect.map((sent) => sent.response),
+      )
     const poll = <A>(operation: {
       readonly path: (token: Token) => string
       readonly decode: (
         response: HttpClientResponse.HttpClientResponse,
         context: MediaProtocol.PollContext<Token>,
       ) => Effect.Effect<A, AIError>
-    }) =>
-      transport.call("GET", operation.path(token), exchange, execute).pipe(
-        Effect.retry({ schedule: READ_RETRY, while: isRetryable }),
-        Effect.flatMap((sent) => operation.decode(sent.response, { token })),
-      )
+    }) => get(operation.path(token)).pipe(Effect.flatMap((response) => operation.decode(response, { token, get })))
     const status = poll(protocol.status)
     const cancel = protocol.cancel
     return {
